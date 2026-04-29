@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Board</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --panel-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e6e8ee;
+    --muted: #9aa3b2;
+    --accent: #7aa2ff;
+    --accent-2: #4b6fd1;
+    --good: #6ee7b7;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --applied: #34d399;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #f0f2f7;
+      --border: #e2e6ee;
+      --text: #161922;
+      --muted: #6b7280;
+      --accent: #2952d6;
+      --accent-2: #1a3aa6;
+      --good: #059669;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --applied: #047857;
+      --shadow: 0 1px 2px rgba(15,20,40,.06), 0 4px 14px rgba(15,20,40,.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+  }
+  .header-row {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 1400px; margin: 0 auto;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-size: 18px; font-weight: 600; margin: 0;
+    letter-spacing: -.01em;
+  }
+  .count { color: var(--muted); font-size: 13px; }
+  .grow { flex: 1; }
+  .search {
+    flex: 1 1 280px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 9px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .12s;
+  }
+  .search:focus { border-color: var(--accent); }
+  .filters {
+    max-width: 1400px; margin: 10px auto 0;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 11px;
+    font-size: 12.5px;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: all .12s;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .chip .n {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--panel-2);
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+  .chip.active .n { background: rgba(255,255,255,.22); color: #fff; }
+  .chip-group { display: flex; gap: 6px; align-items: center; }
+  .chip-group-label { color: var(--muted); font-size: 12px; margin-right: 2px; }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--muted); font-size: 12.5px; cursor: pointer; user-select: none;
+    padding: 5px 10px; border-radius: 8px;
+  }
+  .toggle:hover { color: var(--text); }
+  .toggle input { accent-color: var(--accent); }
+  .btn {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 12.5px;
+    transition: all .12s;
+  }
+  .btn:hover { border-color: var(--accent); }
+  main {
+    max-width: 1400px; margin: 0 auto; padding: 18px 20px 80px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: transform .08s, border-color .12s, box-shadow .12s;
+    position: relative;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+  }
+  .card.applied {
+    opacity: .55;
+    border-color: var(--border);
+  }
+  .card.applied::before {
+    content: "✓ Applied";
+    position: absolute; top: 10px; right: 10px;
+    font-size: 10.5px; color: var(--applied);
+    background: color-mix(in srgb, var(--applied) 14%, transparent);
+    padding: 2px 7px; border-radius: 999px; font-weight: 600;
+  }
+  .card.flagged { border-left: 3px solid var(--warn); }
+  .card a.title {
+    color: var(--text); font-weight: 600; font-size: 15px;
+    text-decoration: none; line-height: 1.3;
+    word-break: break-word;
+  }
+  .card a.title:hover { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .meta .company { color: var(--text); font-weight: 500; }
+  .meta .dot { opacity: .4; }
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .badge {
+    font-size: 10.5px; padding: 2px 7px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
+  .actions {
+    display: flex; gap: 6px; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .actions button {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 4px 10px; border-radius: 6px;
+    font-size: 11.5px; cursor: pointer; transition: all .1s;
+  }
+  .actions button:hover { color: var(--text); border-color: var(--accent); }
+  .actions button.is-applied { color: var(--applied); border-color: color-mix(in srgb, var(--applied) 50%, var(--border)); }
+  .empty {
+    text-align: center; color: var(--muted); padding: 60px 20px;
+    font-size: 14px;
+  }
+  .loading {
+    text-align: center; color: var(--muted); padding: 80px 20px;
+  }
+  .err {
+    background: color-mix(in srgb, var(--bad) 12%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--bad) 40%, var(--border));
+    color: var(--text);
+    padding: 14px 16px; border-radius: 10px; margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .err code { font-size: 12px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+  .source-linkedin { color: #0a66c2; }
+  .source-simplify { color: #8b5cf6; }
+  .source-welcome { color: #fb7185; }
+  .source-builtin { color: #fb923c; }
+  @media (max-width: 640px) {
+    header { padding: 10px 12px; }
+    main { padding: 12px 12px 80px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <h1>Job Board</h1>
+    <span class="count" id="count">…</span>
+    <div class="grow"></div>
+    <input id="q" class="search" placeholder="Search title or company…" autocomplete="off">
+    <button class="btn" id="refresh" title="Re-fetch from Google Sheet">↻ Refresh</button>
+  </div>
+  <div class="filters">
+    <span class="chip-group-label">Source</span>
+    <div class="chip-group" id="sources"></div>
+    <span style="width: 10px"></span>
+    <span class="chip-group-label">When</span>
+    <div class="chip-group" id="dates">
+      <span class="chip" data-days="1">24h</span>
+      <span class="chip" data-days="7">7d</span>
+      <span class="chip" data-days="30">30d</span>
+      <span class="chip active" data-days="0">All</span>
+    </div>
+    <span style="width: 10px"></span>
+    <label class="toggle"><input type="checkbox" id="hideApplied"> Hide applied</label>
+    <label class="toggle"><input type="checkbox" id="hideFlagged"> Hide messy rows</label>
+  </div>
+</header>
+<main>
+  <div id="content" class="loading">Loading jobs…</div>
+</main>
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjtUFAP8QER17YmTuVoTloVC5z4QeaD7KDj8ybNGI3_oikgHBSvtDVZ666amiDNkjRkTpU1bS1jukQ/pub?gid=0&single=true&output=csv";
+
+const APPLIED_KEY = "jobboard.applied.v1";
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], n = text[i + 1];
+    if (q) {
+      if (c === '"' && n === '"') { field += '"'; i++; }
+      else if (c === '"') { q = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { row.push(field); field = ""; }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ""));
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(+m[3], +m[1] - 1, +m[2]);
+}
+
+// Heuristic: detect rows where columns drifted (LinkedIn scraper artifacts).
+// Tell-tale signs: location field contains boilerplate like "This company is
+// actively hiring" or "Apply with resume & profile", or company is just a
+// place name.
+const LOC_GIVEAWAYS = ["this company is actively hiring", "apply with resume & profile", "apply with resume and profile"];
+const PLACE_AS_COMPANY = ["london", "greater london", "united kingdom", "england, united kingdom", "london area, united kingdom", "england", "scotland"];
+function isFlagged(r) {
+  const loc = (r.location || "").toLowerCase().trim();
+  const co = (r.company || "").toLowerCase().trim();
+  if (LOC_GIVEAWAYS.some(g => loc.includes(g))) return true;
+  if (PLACE_AS_COMPANY.includes(co)) return true;
+  return false;
+}
+
+function sourceClass(s) {
+  s = (s || "").toLowerCase();
+  if (s.includes("linkedin")) return "source-linkedin";
+  if (s.includes("simplify")) return "source-simplify";
+  if (s.includes("jungle")) return "source-welcome";
+  if (s.includes("built")) return "source-builtin";
+  return "";
+}
+
+function loadApplied() {
+  try { return new Set(JSON.parse(localStorage.getItem(APPLIED_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveApplied(set) {
+  localStorage.setItem(APPLIED_KEY, JSON.stringify([...set]));
+}
+
+// State
+let JOBS = [];
+let APPLIED = loadApplied();
+const state = { q: "", source: "all", days: 0, hideApplied: false, hideFlagged: false };
+
+async function load() {
+  const el = document.getElementById("content");
+  el.className = "loading";
+  el.textContent = "Loading jobs…";
+  try {
+    const res = await fetch(CSV_URL + "&_=" + Date.now());
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const idx = (name) => header.indexOf(name);
+    const di = idx("date"), si = idx("source"), ti = idx("job title"),
+          ci = idx("company"), li = idx("location"), ui = idx("url"), sti = idx("status");
+    JOBS = rows.slice(1).map((r, i) => ({
+      i,
+      date: r[di] || "",
+      dateObj: parseDate(r[di]),
+      source: r[si] || "",
+      title: r[ti] || "",
+      company: r[ci] || "",
+      location: r[li] || "",
+      url: r[ui] || "",
+      status: r[sti] || "",
+    })).filter(j => j.url || j.title);
+    JOBS.forEach(j => { j.flagged = isFlagged(j); j.id = j.url || (j.title + "|" + j.company + "|" + j.date); });
+    JOBS.sort((a, b) => (b.dateObj?.getTime() || 0) - (a.dateObj?.getTime() || 0));
+    buildSourceChips();
+    render();
+  } catch (e) {
+    el.className = "";
+    el.innerHTML = `<div class="err">Couldn't load jobs: <code>${e.message}</code><br><br>Make sure the sheet is still published to web (CSV).</div>`;
+  }
+}
+
+function buildSourceChips() {
+  const counts = new Map();
+  JOBS.forEach(j => {
+    const s = j.source.trim();
+    if (!s) return;
+    // ignore obvious garbage (very long source values from drifted rows)
+    if (s.length > 40) return;
+    counts.set(s, (counts.get(s) || 0) + 1);
+  });
+  const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const host = document.getElementById("sources");
+  host.innerHTML = `<span class="chip ${state.source === 'all' ? 'active' : ''}" data-source="all">All <span class="n">${JOBS.length}</span></span>`;
+  for (const [name, n] of entries) {
+    if (n < 2) continue;
+    const chip = document.createElement("span");
+    chip.className = "chip" + (state.source === name ? " active" : "");
+    chip.dataset.source = name;
+    chip.innerHTML = `${name} <span class="n">${n}</span>`;
+    host.appendChild(chip);
+  }
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+function render() {
+  const q = state.q.trim().toLowerCase();
+  const now = Date.now();
+  const cutoff = state.days > 0 ? now - state.days * 86400000 : 0;
+
+  const filtered = JOBS.filter(j => {
+    if (state.source !== "all" && j.source.trim() !== state.source) return false;
+    if (state.days > 0 && (!j.dateObj || j.dateObj.getTime() < cutoff)) return false;
+    if (state.hideApplied && APPLIED.has(j.id)) return false;
+    if (state.hideFlagged && j.flagged) return false;
+    if (q) {
+      const hay = (j.title + " " + j.company + " " + j.location).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById("count").textContent =
+    `${filtered.length} of ${JOBS.length} job${JOBS.length === 1 ? "" : "s"}`;
+
+  const el = document.getElementById("content");
+  if (filtered.length === 0) {
+    el.className = "";
+    el.innerHTML = `<div class="empty">No jobs match these filters.</div>`;
+    return;
+  }
+  el.className = "grid";
+  el.innerHTML = filtered.map(j => {
+    const applied = APPLIED.has(j.id);
+    const titleHtml = j.url
+      ? `<a class="title" href="${escapeHtml(j.url)}" target="_blank" rel="noopener">${escapeHtml(j.title || "(no title)")}</a>`
+      : `<span class="title">${escapeHtml(j.title || "(no title)")}</span>`;
+    const dateStr = j.dateObj
+      ? j.dateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+      : escapeHtml(j.date);
+    return `
+      <div class="card ${applied ? "applied" : ""} ${j.flagged ? "flagged" : ""}" data-id="${escapeHtml(j.id)}">
+        ${titleHtml}
+        <div class="meta">
+          <span class="company">${escapeHtml(j.company || "—")}</span>
+          ${j.location ? `<span class="dot">·</span><span>${escapeHtml(j.location)}</span>` : ""}
+        </div>
+        <div class="badges">
+          <span class="badge ${sourceClass(j.source)}">${escapeHtml(j.source || "?")}</span>
+          <span class="badge">${dateStr}</span>
+          ${j.flagged ? `<span class="badge warn" title="Columns may be misaligned in source data">⚠ check fields</span>` : ""}
+        </div>
+        <div class="actions">
+          <button class="apply-btn ${applied ? "is-applied" : ""}" data-id="${escapeHtml(j.id)}">
+            ${applied ? "✓ Applied" : "Mark applied"}
+          </button>
+          ${j.url ? `<button onclick="window.open('${escapeHtml(j.url)}','_blank')">Open ↗</button>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Wire up
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; render(); });
+document.getElementById("refresh").addEventListener("click", load);
+document.getElementById("hideApplied").addEventListener("change", e => { state.hideApplied = e.target.checked; render(); });
+document.getElementById("hideFlagged").addEventListener("change", e => { state.hideFlagged = e.target.checked; render(); });
+
+document.getElementById("sources").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  state.source = chip.dataset.source;
+  document.querySelectorAll("#sources .chip").forEach(c => c.classList.toggle("active", c === chip));
+  render();
+});
+document.getElementById("dates").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  state.days = +chip.dataset.days;
+  document.querySelectorAll("#dates .chip").forEach(c => c.classList.toggle("active", c === chip));
+  render();
+});
+document.getElementById("content").addEventListener("click", e => {
+  const btn = e.target.closest(".apply-btn");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (APPLIED.has(id)) APPLIED.delete(id); else APPLIED.add(id);
+  saveApplied(APPLIED);
+  render();
+});
+
+load();
+</script>
+</body>
+</html>
