@@ -6,6 +6,21 @@
 <title>Job Board</title>
 <style>
   :root {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --panel-2: #f0f2f7;
+    --border: #e2e6ee;
+    --text: #161922;
+    --muted: #6b7280;
+    --accent: #2952d6;
+    --accent-2: #1a3aa6;
+    --good: #059669;
+    --warn: #b45309;
+    --bad: #b91c1c;
+    --applied: #047857;
+    --shadow: 0 1px 2px rgba(15,20,40,.06), 0 4px 14px rgba(15,20,40,.08);
+  }
+  html[data-theme="dark"] {
     --bg: #0f1115;
     --panel: #181b22;
     --panel-2: #1f232c;
@@ -19,23 +34,6 @@
     --bad: #f87171;
     --applied: #34d399;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f6f7fb;
-      --panel: #ffffff;
-      --panel-2: #f0f2f7;
-      --border: #e2e6ee;
-      --text: #161922;
-      --muted: #6b7280;
-      --accent: #2952d6;
-      --accent-2: #1a3aa6;
-      --good: #059669;
-      --warn: #b45309;
-      --bad: #b91c1c;
-      --applied: #047857;
-      --shadow: 0 1px 2px rgba(15,20,40,.06), 0 4px 14px rgba(15,20,40,.08);
-    }
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -215,6 +213,7 @@
     <span class="count" id="count">…</span>
     <div class="grow"></div>
     <input id="q" class="search" placeholder="Search title or company…" autocomplete="off">
+    <button class="btn" id="theme" title="Toggle light/dark"></button>
     <button class="btn" id="refresh" title="Re-fetch from Google Sheet">↻ Refresh</button>
   </div>
   <div class="filters">
@@ -240,6 +239,19 @@
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjtUFAP8QER17YmTuVoTloVC5z4QeaD7KDj8ybNGI3_oikgHBSvtDVZ666amiDNkjRkTpU1bS1jukQ/pub?gid=0&single=true&output=csv";
 
 const APPLIED_KEY = "jobboard.applied.v1";
+const THEME_KEY = "jobboard.theme.v1";
+
+(function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const theme = saved || "light";
+  document.documentElement.dataset.theme = theme;
+})();
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem(THEME_KEY, t);
+  const btn = document.getElementById("theme");
+  if (btn) btn.textContent = t === "dark" ? "☀ Light" : "☾ Dark";
+}
 
 function parseCSV(text) {
   const rows = [];
@@ -426,6 +438,10 @@ function render() {
 // Wire up
 document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; render(); });
 document.getElementById("refresh").addEventListener("click", load);
+setTheme(document.documentElement.dataset.theme || "light");
+document.getElementById("theme").addEventListener("click", () => {
+  setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+});
 document.getElementById("hideApplied").addEventListener("change", e => { state.hideApplied = e.target.checked; render(); });
 document.getElementById("hideFlagged").addEventListener("change", e => { state.hideFlagged = e.target.checked; render(); });
 
